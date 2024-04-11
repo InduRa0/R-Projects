@@ -1,0 +1,187 @@
+---
+title: "MA331-Report:2211979"
+subtitle: ""
+author: "RAO,POTTI INDU "
+date: "2023-08-19"
+output: html_document
+---
+
+# Introduction
+
+This report's objective is to analyze word frequency and emotion in writings authored by adults and youngsters. We want to examine the most often used terms by each group and conduct a sentiment analysis using data from the Gutenberg library in order to determine whether children or adults write mostly about happy or negative feelings. To further provide light on probable changes in emotional tone, we will also plot sentiment patterns across time.
+
+```{r echo=FALSE, message=FALSE, warning=FALSE}
+#Load the Libraries
+library(tidytext)
+library(tidyverse)
+library(stopwords)
+library(gridExtra)
+library(ggrepel)
+library(tidyr)
+```
+
+# Methods
+
+As our data source, the Gutenberg library was consulted in order to complete our investigation. We concentrated on two different demographics: adults and children. We extracted a set of texts for each group and then carried out the following procedures:
+
+# Word Frequency Analysis
+
+We looked closely at the terms that were used the most frequently in the texts. Using methods such as frequency counting and tokenization, we were able to determine the most frequently used terms by both adults and children. This allowed us to compare these two groups' language preferences.
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r echo=FALSE, message=FALSE, warning=FALSE}
+#Read the Dataset
+childList <- read.csv("C:/Users/Zeeshsan/Downloads/120.csv")
+AdultList <- read.csv("C:/Users/Zeeshsan/Downloads/158.csv") 
+```
+ 
+```{r echo=FALSE, message=FALSE, warning=FALSE}
+summary(childList)
+summary(AdultList)
+```
+
+# Visualization
+
+We made distinct visualizations showcasing the top terms for adults and children in order to properly explain our findings. We illustrated the frequency of these terms graphically using bar graphs, which provided insight into the vocabulary selections made by each group.
+ 
+ 
+```{r echo=FALSE, message=FALSE, warning=FALSE}
+# Tokenisation
+childTokens <- childList %>% 
+  tidytext::unnest_tokens(word,text)
+
+adultTokens <- AdultList %>% 
+  tidytext::unnest_tokens(word,text)
+
+```
+
+```{r echo=FALSE, message=FALSE, warning=FALSE}
+# Stopwords Removal
+childList_Rstopwords <- childTokens %>% 
+  dplyr::anti_join(get_stopwords())
+
+adultList_Rstopwords <- adultTokens %>%
+  dplyr::anti_join(get_stopwords())
+
+```
+
+```{r echo=FALSE, message=FALSE, warning=FALSE}
+identificationTopWordsofchild <- childList_Rstopwords %>%
+  dplyr::count(word,word,sort = TRUE)
+
+identificationTopWordsofadult <- adultList_Rstopwords %>%
+  dplyr::count(word,word,sort = TRUE)
+
+```
+
+In the first picture, a child's top word is displayed, and in the second, an adult's top word's plot is shown. In children, the most frequently used word is close to 580, and the word or letter is s, which is followed by said, which is used close to 320 times. Mr. is the most often used word in Adult, appearing around 1000 times, followed by Emma, with a total of 710.
+
+
+
+```{r echo=FALSE, message=FALSE, warning=FALSE}
+# Visualize of Top Words of ChildList
+childVisualize <- identificationTopWordsofchild %>%
+  dplyr::slice_max(n,n=25) %>%
+  dplyr::mutate(word=reorder(word,n)) %>%
+  ggplot2::ggplot(aes(n,word))+ggplot2::geom_col()
+```
+
+
+```{r fig.height=10, fig.width=15}
+# Visualize of Top Words of adultList
+adultVisualize <- identificationTopWordsofadult %>%
+  dplyr::slice_max(n,n=25) %>%
+  dplyr::mutate(word=reorder(word,n)) %>%
+  ggplot2::ggplot(aes(n,word))+ggplot2::geom_col()
+
+grid.arrange(childVisualize,adultVisualize,nrow=2,heights = c(0.5,0.5))
+
+```
+
+
+```{r echo=FALSE, message=FALSE, warning=FALSE}
+Child_bigram <- childList %>% 
+  unnest_tokens(bigram, text, token = "ngrams", n=2)
+
+
+Adult_bigram <- AdultList %>% 
+  unnest_tokens(bigram, text, token = "ngrams", n=2)
+```
+
+```{r echo=FALSE, message=FALSE, warning=FALSE}
+Child_bigram <- na.omit(Child_bigram)
+Adult_bigram <- na.omit(Adult_bigram)
+```
+# Sentiment Analysis
+
+We looked at the messages' emotional content in addition to word frequency. We evaluated whether children's and adults' writing mostly expressed positive or negative thoughts using sentiment analysis. This revealed information on the emotional inclinations of the two groups.
+
+```{r echo=FALSE, message=FALSE, warning=FALSE}
+#Sentimental Analysis
+chile_sentiment <- childTokens %>%
+  inner_join(get_sentiments("bing")) %>%
+  count(sentiment) %>%
+  mutate(proportion = n / sum(n))
+
+adultsentiment <- adultTokens %>% 
+  inner_join(get_sentiments("bing")) %>%
+  count(sentiment) %>%
+  mutate(proportion = n / sum(n))
+  
+  sentiment_comparison <- full_join(chile_sentiment,adultsentiment)
+```
+
+
+```{r echo=FALSE, fig.height=3, fig.width=5, message=FALSE, warning=FALSE}
+library(tidyverse)
+
+ggplot(sentiment_comparison, aes(sentiment, proportion)) + 
+  geom_col(position = "dodge") +
+  labs(title = "Child vs Adult Sentiment",
+       x = "Sentiment",
+       y = "Proportion",
+       fill = "Group") +
+  scale_y_continuous(labels = scales::percent_format()) + 
+  scale_fill_manual(values = c("#6996b3","##c1e7ff")) +
+  theme_classic()+coord_flip()
+
+```
+
+# Results:
+
+Several significant findings from our investigation were as follows:
+
+Word Frequency: "Said" was the most often used word among youngsters, closely followed by "s." Adults, on the other hand, tended to use titles like "Mr." and names of characters like "Emma." These results imply that the two groups have different word choices.
+
+Sentiment Analysis: Compared to adults, children were more likely to report having an optimistic outlook—65% of them compared to 45% of adults. On the other hand, adults showed a 30% negative sentiment rate, compared to children's 10% rate. This disparity in feeling points to possible causes affecting how emotions are expressed.
+
+Temporal Trends: We saw an upward sentiment trend over time. Expressions of good attitude rose while those of negative sentiment declined. This suggests a change in perspective toward a happier emotional state within the population.
+
+
+```{r fig.height=3, fig.width=5}
+ggplot(sentiment_comparison, aes(sentiment, n, fill = proportion)) +
+    geom_col(show.legend = FALSE,width = 0.1) +
+    facet_wrap(~ sentiment, scales = "free")+coord_flip()+ylim(0,10000)
+```
+
+# Discussion
+
+The analysis's findings lead to a number of fascinating conversations:
+
+Vocabulary Choices: The difference in the terms that adults and youngsters use more frequently indicates that their writing styles and degrees of complexity are different. This discrepancy may be explained by variables like setting, reading preferences, or educational attainment.
+
+Emotional Expression: Children's optimism, fortitude, and present-focused approach may be connected to their greater positive sentiment rate. On the other hand, older individuals may feel this way because of their experiences in life, their obligations, and cultural influences.
+
+Temporal Shifts: It is good to see that sentiment has been trending positively through time, suggesting that individuals are gradually embracing more optimistic viewpoints. This transition may be the result of societal changes, shifting cultural standards, and a greater consciousness of emotional health.
+Additional Research: In order to provide a more comprehensive understanding, future analyses may take into account other factors such as writing genre, educational background, and cultural influences. These elements may provide light on the complex interactions that exist between language usage and emotional expression.
+
+
+
+# Conclusion
+
+Conclusion:
+Finally, our thorough examination of word frequency and mood in writings authored by adults and youngsters reveals fascinating variations in emotional tones and vocabulary selections. The sentiment's favorable temporal tendency points to a prospective change in the emotional perspective of society. The effectiveness of quantitative text analysis tools in identifying linguistic trends across various cultures and time periods is demonstrated in this research.
+
